@@ -1,0 +1,73 @@
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<fcntl.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<netinet/in.h>
+# define PORT 2319
+
+int main(){
+        pid_t childpid;
+        int sockfd = socket(AF_INET,SOCK_STREAM,0);
+        struct sockaddr_in serv_addr;
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(PORT);
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+
+        if((bind(sockfd,(struct sockaddr*)&serv_addr,sizeof(serv_addr)) < 0)) {return 0;}
+        if((listen(sockfd,1))< 0) return 0;
+
+        while(1){
+                int clifd = accept(sockfd,NULL,NULL);
+
+                char buffer_send[100];
+                char buffer_rec[100];
+                if((childpid = fork()) == 0){
+                        close(sockfd);
+                        recv(clifd,buffer_rec,sizeof(buffer_rec),0);
+
+                        if(strcmp(buffer_rec,"exit") == 0){
+                                send(clifd,"goodbye",strlen("goodbye")+1,0);
+                                return 0;
+                        }
+
+                        /*FILE *f;
+                          f = fopen(buffer_rec,"r+");
+
+                          if(f < 0 ) printf("\nFile not found");
+
+                          strcpy(buffer_send,"Enter contents to write in the file");*/
+
+                        printf("enter message:");
+
+                        gets(buffer_send);
+
+                        //strcpy(buffer_send,"Hello");
+
+                        send(clifd,buffer_send,sizeof(buffer_send),0);
+                }
+
+                /*recv(clifd,buffer_rec,sizeof(buffer_rec),0);
+
+                  fwrite(buffer_rec,1,sizeof(buffer_rec),f);
+
+                  int c;
+                  printf("Want to show file content: ");
+                  scanf("%d",&c);
+
+                  if(c == 1){
+                  char temp[100];
+
+                  while(fgets(temp,100,f)){
+                  printf("%s",temp);
+                  }}
+
+                //gets(buffer_send);
+                //send(clifd,buffer_send,sizeof(buffer_send),0);
+                if(strcmp(buffer_send,"exit") == 0){ break;}*/
+        }
+        close(sockfd);
+        return 0;
+}

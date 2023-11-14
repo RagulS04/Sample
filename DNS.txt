@@ -1,0 +1,399 @@
+#include<stdio.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<unistd.h>
+int main()
+{
+        int sockdesc;
+        struct sockaddr_in servaddr;
+        sockdesc=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesc==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(2011);
+        servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+
+        char buffer[20], result[20];
+        int port[1];
+        printf("ENTER THE DOMAIN NAME: ");
+        scanf("%s", buffer);
+        char end[5];
+        int l = strlen(buffer), j = 0;
+        for(int i = l - 4; i < l; i++){
+                end[j] = buffer[i];
+                j++;
+        }
+        end[j]='\0';
+        sendto(sockdesc,end,sizeof(end),0,(struct sockaddr *)&servaddr,sizeof(servaddr));
+        int len=sizeof(servaddr);
+        recvfrom(sockdesc,port,sizeof(port),0,(struct sockaddr *)&servaddr,&len);
+        printf("Result from ROOT DNS SERVER: %d\n", port[0]);
+        //TLD SERVER
+        int sockdesca;
+        struct sockaddr_in servaddra,cliaddra;
+
+        sockdesca=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesca==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddra.sin_family=AF_INET;
+        servaddra.sin_port=htons(port[0]);
+        servaddra.sin_addr.s_addr=htonl(INADDR_ANY);
+        sendto(sockdesca,buffer,sizeof(buffer),0,(struct sockaddr *)&servaddra,sizeof(servaddra));
+        int lena=sizeof(servaddra);
+        recvfrom(sockdesca,result,sizeof(result),0,(struct sockaddr *)&servaddra,&lena);
+        printf("IP ADDRESS FROM TLD SERVER : %s\n", result);
+        close(sockdesca);
+        close(sockdesc);
+        return 0;
+
+}
+
+root
+#include<stdio.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<unistd.h>
+int main()
+{
+        int sockdesc;
+        struct sockaddr_in servaddr,cliaddr;
+        int port1[1] = {1205};
+        int port2[1] = {1220};
+        int port3[1] = {2023};
+        sockdesc=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesc==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(2011);
+        servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+        if(bind(sockdesc,(struct sockaddr *)&servaddr,sizeof(servaddr)) < 0)
+        {
+                printf("Bind Failed");
+                return -1;
+        }
+
+        while(1)
+        {
+                int len=sizeof(cliaddr);
+
+                printf("Waiting for a request...\n");
+
+                char buffer[5];
+                recvfrom(sockdesc,buffer,sizeof(buffer),0,(struct sockaddr *)&cliaddr,&len);
+                if(strcmp(".com", buffer) == 0){
+                        printf("%s :: %d\n", buffer, port1[0]);
+                        sendto(sockdesc,port1,sizeof(port1),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else if(strcmp(".edu", buffer) == 0){
+                        printf("%s :: %d\n", buffer, port2[0]);
+                        sendto(sockdesc,port2,sizeof(port2),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else{
+                        printf("%s :: %d\n", buffer, port3[0]);
+                        sendto(sockdesc,port3,sizeof(port3),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                /*sendto(sockdesc,total,sizeof(total),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));*/
+
+        }
+
+        close(sockdesc);
+
+
+
+        return 0;
+}
+
+tld without cache
+
+#include<stdio.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<unistd.h>
+int main()
+{
+        int sockdesc;
+        struct sockaddr_in servaddr,cliaddr;
+
+        sockdesc=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesc==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(1205);
+        servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+        if(bind(sockdesc,(struct sockaddr *)&servaddr,sizeof(servaddr)) < 0)
+        {
+                printf("Bind Failed");
+                return -1;
+        }
+
+        while(1)
+        {
+                int len=sizeof(cliaddr);
+
+                printf("Waiting for a request...\n");
+
+                char buffer[20], result[20];
+                recvfrom(sockdesc,buffer,sizeof(buffer),0,(struct sockaddr *)&cliaddr,&len);
+                /*AUTHORITATIVE SERVER*/
+                int sockdesca;
+                struct sockaddr_in servaddra,cliaddra;
+
+                sockdesca=socket(AF_INET,SOCK_DGRAM,0);
+                if(sockdesca==-1)
+                {
+                        printf("Socket not created");
+                        return -1;
+                }
+
+                servaddra.sin_family=AF_INET;
+                servaddra.sin_port=htons(2912);
+                servaddra.sin_addr.s_addr=htonl(INADDR_ANY);
+                sendto(sockdesca,buffer,sizeof(buffer),0,(struct sockaddr *)&servaddra,sizeof(servaddr));
+                int lena=sizeof(servaddra);
+                recvfrom(sockdesca,result,sizeof(result),0,(struct sockaddr *)&servaddra,&lena);
+                /*END OF AUTHORITATIVE SERVER*/
+                printf("RESULT FROM AUTHORITATIVE SERVER : %s\n", result);
+                sendto(sockdesc,result,sizeof(result),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+
+        }
+        close(sockdesc);
+
+
+
+        return 0;
+}
+
+auth without cache
+#include<stdio.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<unistd.h>
+int main()
+{
+        int sockdesc;
+        struct sockaddr_in servaddr,cliaddr;
+        char ip1[] = "192.168.1.200";
+        char ip2[] = "10.5.12.254";
+        char ip3[] = "14.161.139.31";
+        sockdesc=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesc==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(2912);
+        servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+        if(bind(sockdesc,(struct sockaddr *)&servaddr,sizeof(servaddr)) < 0)
+        {
+                printf("Bind Failed");
+                return -1;
+        }
+
+        while(1)
+        {
+                int len=sizeof(cliaddr);
+
+                printf("Waiting for a request...\n");
+
+                char buffer[20];
+                recvfrom(sockdesc,buffer,sizeof(buffer),0,(struct sockaddr *)&cliaddr,&len);
+                if(strcmp("www.google.com", buffer) == 0){
+                        printf("%s :: %s\n",buffer, ip1);
+                        sendto(sockdesc,ip1,sizeof(ip1),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else if(strcmp("www.bing.com", buffer) == 0){
+                        printf("%s :: %s\n",buffer, ip2);
+                        sendto(sockdesc,ip2,sizeof(ip2),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else{
+                        printf("%s :: %s\n",buffer, ip3);
+                        sendto(sockdesc,ip3,sizeof(ip3),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+
+        }
+
+        close(sockdesc);
+
+
+
+        return 0;
+}
+
+tld with cache
+#include<stdio.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<unistd.h>
+int main()
+{
+        int sockdesc;
+        struct sockaddr_in servaddr,cliaddr;
+        char result[3][20];
+        strcpy(result[0], " ");
+        strcpy(result[1], " ");
+        strcpy(result[2], " ");
+        sockdesc=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesc==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(1220);
+        servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+        if(bind(sockdesc,(struct sockaddr *)&servaddr,sizeof(servaddr)) < 0)
+        {
+                printf("Bind Failed");
+                return -1;
+        }
+
+        while(1)
+        {
+                int len=sizeof(cliaddr);
+
+                printf("Waiting for a request...\n");
+
+                char buffer[20], temp[20];
+                recvfrom(sockdesc,buffer,sizeof(buffer),0,(struct sockaddr *)&cliaddr,&len);
+                if(strcmp(buffer, "www.vitvellore.edu") == 0 && strcmp(" ", result[0]) != 0){
+                        printf("IP ADDRESS FROM CACHE : %s\n", result[0]);
+                        strcpy(temp, result[0]);
+                        sendto(sockdesc,temp,sizeof(temp),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else if(strcmp(buffer, "www.annauniv.edu") == 0 && strcmp(" ", result[1]) != 0){
+                        printf("IP ADDRESS FROM CACHE : %s\n", result[1]);
+                        strcpy(temp, result[1]);
+                        sendto(sockdesc,temp,sizeof(temp),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else{
+                        /*AUTHORITATIVE SERVER*/
+                        int sockdesca;
+                        struct sockaddr_in servaddra,cliaddra;
+
+                        sockdesca=socket(AF_INET,SOCK_DGRAM,0);
+                        if(sockdesca==-1)
+                        {
+                                printf("Socket not created");
+                                return -1;
+                        }
+
+                        servaddra.sin_family=AF_INET;
+                        servaddra.sin_port=htons(2920);
+                        servaddra.sin_addr.s_addr=htonl(INADDR_ANY);
+                        sendto(sockdesca,buffer,sizeof(buffer),0,(struct sockaddr *)&servaddra,sizeof(servaddr));
+                        int lena=sizeof(servaddra);
+                        recvfrom(sockdesca,temp,sizeof(temp),0,(struct sockaddr *)&servaddra,&lena);
+                        if(strcmp(buffer, "www.vitvellore.edu") == 0){
+                                /*recvfrom(sockdesca,temp,sizeof(temp),0,(struct sockaddr *)&servaddra,&lena);*/
+                                strcpy(result[0], temp);
+                                printf("RESULT FROM AUTHORITATIVE SERVER : %s\n", result[0]);
+                                /*sendto(sockdesc,temp,sizeof(temp),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));*/
+                        }
+                        if(strcmp(buffer, "www.annauniv.edu") == 0){
+                                /*recvfrom(sockdesca,temp,sizeof(temp),0,(struct sockaddr *)&servaddra,&lena);*/
+                                strcpy(result[1], temp);
+                                printf("RESULT FROM AUTHORITATIVE SERVER : %s\n", result[1]);
+                                /*sendto(sockdesc,temp,sizeof(temp),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));*/
+                        }
+                        sendto(sockdesc,temp,sizeof(temp),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                        /*END OF AUTHORITATIVE SERVER*/
+                }
+
+        }
+        close(sockdesc);
+
+
+
+        return 0;
+}
+
+auth with cache
+#include<stdio.h>
+#include<sys/types.h>
+#include<netinet/in.h>
+#include<sys/socket.h>
+#include<string.h>
+#include<unistd.h>
+int main()
+{
+        int sockdesc;
+        struct sockaddr_in servaddr,cliaddr;
+        char ip1[] = "191.168.1.200";
+        char ip2[] = "11.5.12.254";
+        char ip3[] = "15.161.139.31";
+        sockdesc=socket(AF_INET,SOCK_DGRAM,0);
+        if(sockdesc==-1)
+        {
+                printf("Socket not created");
+                return -1;
+        }
+
+        servaddr.sin_family=AF_INET;
+        servaddr.sin_port=htons(2920);
+        servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+        if(bind(sockdesc,(struct sockaddr *)&servaddr,sizeof(servaddr)) < 0)
+        {
+                printf("Bind Failed");
+                return -1;
+        }
+
+        while(1)
+        {
+                int len=sizeof(cliaddr);
+
+                printf("Waiting for a request...\n");
+
+                char buffer[20];
+                recvfrom(sockdesc,buffer,sizeof(buffer),0,(struct sockaddr *)&cliaddr,&len);
+                if(strcmp("www.vitvellore.edu", buffer) == 0){
+                        printf("%s :: %s\n",buffer, ip1);
+                        sendto(sockdesc,ip1,sizeof(ip1),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else if(strcmp("www.annauniv.edu", buffer) == 0){
+                        printf("%s :: %s\n",buffer, ip2);
+                        sendto(sockdesc,ip2,sizeof(ip2),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+                else{
+                        printf("%s :: %s\n",buffer, ip3);
+                        sendto(sockdesc,ip3,sizeof(ip3),0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+                }
+
+        }
+
+        close(sockdesc);
+
+
+
+        return 0;
+}
+
+
